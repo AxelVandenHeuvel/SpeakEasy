@@ -1,79 +1,77 @@
 # SpeakEasy
 
-Local, real-time speech-to-text that types into any window. Hold a key, speak, release — your words appear wherever your cursor is, optionally refined by AI.
+Local, real-time speech-to-text for macOS. Hold a key, speak, release — your words appear wherever your cursor is, optionally refined by a local AI. Everything runs on your machine. No cloud, no API keys, no subscription.
+
+## Download
+
+**[Download for macOS (Apple Silicon)](https://github.com/AxelVandenHeuvel/SpeakEasy/releases/latest)**
+
+Signed with Developer ID and notarized by Apple — opens without Gatekeeper warnings.
+
+Windows build coming soon.
 
 ## How It Works
 
-1. Hold the **Option** key and speak
+1. Hold **Option** (configurable) and speak
 2. Release the key
-3. SpeakEasy transcribes your speech locally using [Whisper](https://github.com/openai/whisper)
-4. Optionally refines the text with Claude Haiku (fixes grammar, removes filler words)
-5. Types the result into whatever window is focused
+3. SpeakEasy transcribes your speech locally using [whisper.cpp](https://github.com/ggerganov/whisper.cpp)
+4. Optionally refines the text with a local Qwen 2.5 LLM via [llama.cpp](https://github.com/ggerganov/llama.cpp)
+5. Pastes the result into whatever window is focused
 
-A menu bar icon shows grey (idle) or red (recording).
+A menu bar icon shows when it's listening.
 
-For full technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+## Features
+
+- **Three refinement modes** — Raw, Clean (rule-based filler removal), or Rewrite (LLM restructures for clarity)
+- **Two tones** — Normal (casual) or Formal (professional / emails)
+- **Voice shortcuts** — say a trigger phrase, get custom text pasted (e.g., "my email" → `you@example.com`)
+- **Personal dictionary** — help Whisper spell your names, brand names, technical terms correctly
+- **Dictation commands** — "new line", "question mark", "delete that", etc.
+- **Color themes** — Dusk Sprinter, Mono, Classic, Vaporwave
+- **Custom push-to-talk key** — up to 3-key combos
 
 ## Requirements
 
-- macOS (tested on macOS 15+)
-- Python 3.10+
-- Microphone access (macOS will prompt on first run)
-- Accessibility permissions for keyboard input (System Settings > Privacy & Security > Accessibility)
-- [Anthropic API key](https://console.anthropic.com/settings/keys) (for AI text refinement — optional if using `--raw` mode)
+- macOS 12 (Monterey) or later
+- Apple Silicon (M1/M2/M3) — Intel not yet supported
 
-## Quick Start
+## Privacy
+
+Everything happens on your device. SpeakEasy does not send audio, text, or any data to the cloud. No accounts, no telemetry, no API calls.
+
+## Building from Source
 
 ```bash
-# Clone the repo
-git clone https://github.com/AxelVandenHeuvel/SpeakEasy.git
+# Clone with submodules (whisper.cpp, llama.cpp)
+git clone --recurse-submodules https://github.com/AxelVandenHeuvel/SpeakEasy.git
 cd SpeakEasy
 
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Download models (~1.2GB)
+mkdir -p models
+curl -L -o models/ggml-base.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+curl -L -o models/qwen2.5-1.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
 
-# Install dependencies
-pip install -r requirements.txt
+# Build the llama-server sidecar (required for LLM refinement)
+cd vendor/llama.cpp
+cmake -B build -DBUILD_SHARED_LIBS=OFF -DLLAMA_BUILD_SERVER=ON -DLLAMA_SERVER_SSL=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target llama-server -j$(sysctl -n hw.ncpu)
+cp build/bin/llama-server ../../tauri-app/src-tauri/binaries/llama-server-aarch64-apple-darwin
+cd ../..
 
-# Set your Anthropic API key (get one at https://console.anthropic.com/settings/keys)
-export ANTHROPIC_API_KEY="your-key-here"
-
-# Run
-python3 main.py
+# Run in dev mode
+cd tauri-app
+cargo tauri dev
 ```
 
-> **BYOK (Bring Your Own Key):** SpeakEasy uses Claude Haiku for text refinement. You need your own Anthropic API key. Get one at [console.anthropic.com](https://console.anthropic.com/settings/keys). Copy `.env.example` to `.env` and add your key, or export it directly in your terminal.
+## Architecture
 
-## Usage
+See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details.
 
-```bash
-python3 main.py                  # AI-refined text typed into focused window
-python3 main.py --raw            # Raw transcription (no AI refinement, no API key needed)
-python3 main.py --no-type        # Print to console instead of typing
-python3 main.py --raw --no-type  # Raw output to console only
-```
-
-### Push-to-Talk
-
-- **Hold Option** to record
-- **Release Option** to stop and transcribe
-- Menu bar icon: grey = idle, red = recording
-- Right-click the menu bar icon to quit
-
-## Troubleshooting
-
-### "Accessibility" permission error
-Go to **System Settings > Privacy & Security > Accessibility** and add your terminal app (Terminal, iTerm2, etc.).
-
-### Microphone not working
-Go to **System Settings > Privacy & Security > Microphone** and ensure your terminal app has access.
-
-### `ANTHROPIC_API_KEY not set` error
-Export your key before running: `export ANTHROPIC_API_KEY="your-key-here"`. Or use `--raw` mode to skip AI refinement entirely.
-
-### Ctrl+C not stopping the app
-Right-click the menu bar icon and select **Quit**, or use `Ctrl+Z` then `kill %1`.
+Tech stack:
+- **Rust backend** via [Tauri](https://tauri.app/) — audio recording (cpal), hotkey monitoring (device_query), clipboard + paste (enigo/AppleScript)
+- **HTML/CSS/JS frontend** — single-page app, no framework
+- **whisper.cpp** — speech-to-text via Core ML / Metal
+- **llama.cpp** — LLM refinement via Metal, as a bundled sidecar HTTP server
 
 ## License
 
