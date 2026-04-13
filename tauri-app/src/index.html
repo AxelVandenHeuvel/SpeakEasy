@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpeakEasy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Onboarding overlay (shown on first run) -->
+  <div class="onboarding hidden" id="onboarding">
+    <div class="onboarding-content">
+      <div class="onboarding-brand">SPEAKEASY</div>
+      <h1 class="onboarding-title">Welcome</h1>
+      <p class="onboarding-subtitle">SpeakEasy needs two permissions to turn your voice into text.</p>
+
+      <div class="permission-card" id="permMic">
+        <div class="permission-icon">&#127908;</div>
+        <div class="permission-info">
+          <span class="permission-name">Microphone</span>
+          <span class="permission-desc">Record your voice for transcription</span>
+        </div>
+        <button class="permission-btn" id="grantMic">Grant</button>
+      </div>
+
+      <div class="permission-card" id="permAx">
+        <div class="permission-icon">&#9881;</div>
+        <div class="permission-info">
+          <span class="permission-name">Accessibility</span>
+          <span class="permission-desc">Paste transcribed text into other apps</span>
+        </div>
+        <button class="permission-btn" id="grantAx">Grant</button>
+      </div>
+
+      <p class="onboarding-hint">After clicking Grant, toggle SpeakEasy <span class="key-badge">ON</span> in System Settings, then come back here.</p>
+
+      <button class="onboarding-continue" id="onboardingDone">Continue to SpeakEasy</button>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- Left Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-brand">SPEAKEASY</div>
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" data-tab="home">
+          <span class="tab-icon">&#9679;</span> Home
+        </button>
+        <button class="tab-btn" data-tab="transcript">
+          <span class="tab-icon">&#9776;</span> Transcript
+        </button>
+        <button class="tab-btn" data-tab="snippets">
+          <span class="tab-icon">&#43;</span> Shortcuts
+        </button>
+        <button class="tab-btn" data-tab="settings">
+          <span class="tab-icon">&#9881;</span> Settings
+        </button>
+      </div>
+      <div class="status-box">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Starting...</span>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content">
+      <header class="top-bar"></header>
+
+      <!-- Home Tab -->
+      <section class="tab-panel active" id="tab-home">
+        <p class="page-subtitle">Hold <kbd class="key-badge" id="hotkeyDisplay">Option</kbd> to speak. Your words appear wherever you type.</p>
+
+        <div class="cards-row">
+          <div class="stat-card">
+            <span class="card-label">WORDS TODAY</span>
+            <span class="card-value" id="wordsToday">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="card-label">TRANSCRIPTIONS</span>
+            <span class="card-value" id="transcriptionsToday">0</span>
+          </div>
+        </div>
+
+        <span class="section-label">MODELS</span>
+        <div class="model-card">
+          <div>
+            <span class="card-label">WHISPER (SPEECH-TO-TEXT)</span>
+            <span class="model-name" id="whisperModel">base.en</span>
+          </div>
+          <span class="model-status" id="whisperStatus">Loading...</span>
+        </div>
+        <div class="model-card">
+          <div>
+            <span class="card-label">REFINER (AI CLEANUP)</span>
+            <span class="model-name" id="refinerModel">Disabled</span>
+          </div>
+          <span class="model-status" id="refinerStatus">Off</span>
+        </div>
+
+        <span class="section-label">SHORTCUTS</span>
+        <p class="snippet-count" id="snippetCount">0 voice shortcuts configured</p>
+
+        <span class="section-label">DICTATION COMMANDS</span>
+        <div class="commands-grid">
+          <div class="command-item"><span class="command-say">"question mark"</span><span class="command-does">?</span></div>
+          <div class="command-item"><span class="command-say">"exclamation point"</span><span class="command-does">!</span></div>
+          <div class="command-item"><span class="command-say">"colon"</span><span class="command-does">:</span></div>
+          <div class="command-item"><span class="command-say">"semicolon"</span><span class="command-does">;</span></div>
+          <div class="command-item"><span class="command-say">"new line"</span><span class="command-does">↵</span></div>
+          <div class="command-item"><span class="command-say">"new paragraph"</span><span class="command-does">↵↵</span></div>
+          <div class="command-item"><span class="command-say">"open paren"</span><span class="command-does">(</span></div>
+          <div class="command-item"><span class="command-say">"close paren"</span><span class="command-does">)</span></div>
+          <div class="command-item"><span class="command-say">"delete that"</span><span class="command-does">⌘Z</span></div>
+          <div class="command-item"><span class="command-say">"select all"</span><span class="command-does">⌘A</span></div>
+        </div>
+      </section>
+
+      <!-- Transcript Tab -->
+      <section class="tab-panel" id="tab-transcript">
+        <div class="transcript-box">
+          <span class="section-label">TRANSCRIPT LOG</span>
+          <div class="transcript-log" id="transcriptLog"></div>
+        </div>
+        <p class="hint">Hold Option (Alt) to record</p>
+      </section>
+
+      <!-- Shortcuts Tab -->
+      <section class="tab-panel" id="tab-snippets">
+        <div class="snippets-header">
+          <div>
+            <h1 class="page-title">VOICE SHORTCUTS</h1>
+            <p class="page-subtitle">Say a trigger phrase and it gets replaced with your text.</p>
+          </div>
+          <button class="add-btn" id="addSnippetBtn">+ New Shortcut</button>
+        </div>
+
+        <div class="snippet-example">
+          <span class="snippet-example-label">EXAMPLE</span>
+          <div class="snippet-example-content">
+            <span class="snippet-example-say">"my email address"</span>
+            <span class="snippet-arrow">&rarr;</span>
+            <span class="snippet-example-types">john@example.com</span>
+          </div>
+          <p class="snippet-example-desc">Say the trigger phrase while recording and it instantly types the replacement text.</p>
+        </div>
+
+        <div class="snippets-empty" id="snippetsEmpty">
+          <span class="snippets-empty-icon">&#9889;</span>
+          <p>No shortcuts yet</p>
+          <p class="page-subtitle">Click "+ New Shortcut" to create one</p>
+        </div>
+        <div class="snippets-container" id="snippetList"></div>
+      </section>
+
+      <!-- Settings Tab (Discord-style layout) -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="settings-layout">
+          <!-- Settings sidebar nav -->
+          <nav class="settings-nav">
+            <span class="settings-nav-label">SPEECH</span>
+            <button class="settings-nav-btn active" data-section="speech">Voice Input</button>
+            <button class="settings-nav-btn" data-section="refiner">AI Refinement</button>
+            <span class="settings-nav-label">APP</span>
+            <button class="settings-nav-btn" data-section="appearance">Appearance</button>
+            <button class="settings-nav-btn" data-section="advanced">Advanced</button>
+            <button class="settings-nav-btn" data-section="about">About</button>
+          </nav>
+
+          <!-- Settings content -->
+          <div class="settings-content">
+            <!-- Voice Input -->
+            <div class="settings-section active" id="section-speech">
+              <h2 class="settings-title">Voice Input</h2>
+              <p class="settings-desc">Configure how SpeakEasy captures and transcribes your voice.</p>
+              <div class="settings-divider"></div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Push-to-Talk Key</span>
+                  <span class="setting-hint">Click the box and press your desired key combo (up to 3 keys)</span>
+                </div>
+                <button class="hotkey-capture" id="hotkeyCapture">Option</button>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Whisper Model</span>
+                  <span class="setting-hint">Larger models are more accurate but slower</span>
+                </div>
+                <select class="setting-control" id="whisperModelInput">
+                  <option>tiny.en</option>
+                  <option selected>base.en</option>
+                  <option>small.en</option>
+                  <option>medium.en</option>
+                  <option>large</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Language</span>
+                  <span class="setting-hint">Language for transcription</span>
+                </div>
+                <select class="setting-control" id="languageInput">
+                  <option value="en" selected>English</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Max Recording Duration</span>
+                  <span class="setting-hint">Auto-stop recording after this many seconds</span>
+                </div>
+                <div class="setting-control-with-unit">
+                  <input type="text" class="setting-control small" id="maxRecordInput" value="30">
+                  <span class="setting-unit">sec</span>
+                </div>
+              </div>
+
+              <div class="settings-divider"></div>
+
+              <div class="dictionary-section">
+                <div class="setting-info">
+                  <span class="setting-name">Personal Dictionary</span>
+                  <span class="setting-hint">Words you say often that should be spelled correctly (names, technical terms, brands)</span>
+                </div>
+                <div class="dict-chips" id="dictChips"></div>
+                <div class="dict-add-row">
+                  <input type="text" class="setting-control" id="dictInput" placeholder="Add a word...">
+                  <button class="add-btn" id="addDictBtn">+ Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Refinement -->
+            <div class="settings-section" id="section-refiner">
+              <h2 class="settings-title">AI Refinement</h2>
+              <p class="settings-desc">Choose how your transcriptions are cleaned up.</p>
+              <div class="settings-divider"></div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Tone</span>
+                  <span class="setting-hint">How your transcriptions sound after refinement</span>
+                </div>
+                <div class="tone-buttons">
+                  <button class="tone-btn active" data-tone="normal">Normal</button>
+                  <button class="tone-btn" data-tone="formal">Formal</button>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Dictation Commands</span>
+                  <span class="setting-hint">Enable voice commands like "new line", "delete that", etc.</span>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="dictationToggle" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">Refinement Mode</span>
+                  <span class="setting-hint">Controls how text is processed after transcription</span>
+                </div>
+                <select class="setting-control" id="refinerModeInput">
+                  <option value="off">Off — Raw transcription only</option>
+                  <option value="clean">Clean — Remove fillers, fix punctuation</option>
+                  <option value="rewrite" selected>Rewrite — AI restructures for clarity</option>
+                </select>
+              </div>
+
+            </div>
+
+            <!-- Appearance -->
+            <div class="settings-section" id="section-appearance">
+              <h2 class="settings-title">Appearance</h2>
+              <p class="settings-desc">Choose a color theme for SpeakEasy.</p>
+              <div class="settings-divider"></div>
+
+              <div class="theme-grid">
+                <button class="theme-card active" data-theme="speakeasy">
+                  <div class="theme-preview">
+                    <span class="theme-swatch" style="background:#0a0908"></span>
+                    <span class="theme-swatch" style="background:#141210"></span>
+                    <span class="theme-swatch" style="background:#c9a961"></span>
+                  </div>
+                  <span class="theme-name">Speakeasy</span>
+                </button>
+
+                <button class="theme-card" data-theme="absinthe">
+                  <div class="theme-preview">
+                    <span class="theme-swatch" style="background:#0b0d0a"></span>
+                    <span class="theme-swatch" style="background:#141712"></span>
+                    <span class="theme-swatch" style="background:#a8c976"></span>
+                  </div>
+                  <span class="theme-name">Absinthe</span>
+                </button>
+
+                <button class="theme-card" data-theme="oxblood">
+                  <div class="theme-preview">
+                    <span class="theme-swatch" style="background:#0c0808"></span>
+                    <span class="theme-swatch" style="background:#14100f"></span>
+                    <span class="theme-swatch" style="background:#c96555"></span>
+                  </div>
+                  <span class="theme-name">Oxblood</span>
+                </button>
+
+                <button class="theme-card" data-theme="ivory">
+                  <div class="theme-preview">
+                    <span class="theme-swatch" style="background:#120f0a"></span>
+                    <span class="theme-swatch" style="background:#1c1812"></span>
+                    <span class="theme-swatch" style="background:#e0c78c"></span>
+                  </div>
+                  <span class="theme-name">Ivory</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Advanced -->
+            <div class="settings-section" id="section-advanced">
+              <h2 class="settings-title">Advanced</h2>
+              <p class="settings-desc">Fine-tune voice detection sensitivity.</p>
+              <div class="settings-divider"></div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <span class="setting-name">VAD Threshold</span>
+                  <span class="setting-hint">Voice activity detection sensitivity (lower = more sensitive)</span>
+                </div>
+                <input type="text" class="setting-control small" id="vadInput" value="0.003">
+              </div>
+            </div>
+
+            <!-- About -->
+            <div class="settings-section" id="section-about">
+              <h2 class="settings-title">About SpeakEasy</h2>
+              <div class="settings-divider"></div>
+              <div class="about-info">
+                <p>Version 0.1.0</p>
+                <p>Local speech-to-text. No cloud. No API keys. No cost.</p>
+                <p class="about-muted">Built with Whisper.cpp, Tauri, and Rust.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

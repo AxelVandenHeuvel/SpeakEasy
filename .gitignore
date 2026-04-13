@@ -3,3 +3,21 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+
+# Models (too large for git — downloaded separately)
+models/
+
+# Rust build artifacts
+tauri-app/src-tauri/target/
+
+# Local user config
+config.json
+
+# Vendor build outputs (keep source via submodules, ignore build dirs)
+vendor/*/build/
+
+# Tauri sidecar binaries (built via scripts)
+tauri-app/src-tauri/binaries/llama-server*
+
+# Icon intermediate files
+tauri-app/src-tauri/icons/icon.iconset/

@@ -1,9 +1,0 @@
-sounddevice
-numpy
-faster-whisper
-torch
-torchaudio
-anthropic
-pynput
-pystray
-Pillow
